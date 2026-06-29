@@ -1,0 +1,301 @@
+export type Role = "student" | "teacher";
+
+export interface SessionUser {
+  id: string;
+  role: Role;
+  name: string;
+  email?: string;
+  avatarUrl?: string;
+  /** Student-only */
+  rollNumber?: string;
+  /** Teacher-only */
+  department?: string;
+}
+
+
+export interface AuthUser {
+  id: number;
+  role: Role;
+  name: string;
+  email: string;
+}
+
+
+export interface user{
+  id:string,
+  name:string,
+  email:string,
+  role:Role,
+  avatarUrl?:string,
+  rollNumber?:string,
+  department?:string
+}
+
+export interface userContextType{
+  user:user | null,
+  setUser:React.Dispatch<React.SetStateAction<user | null>>
+}
+export type BiometricConfidence = number; // 0..1
+
+export interface BiometricLoginResult {
+  action: "login" | "register" | "voice_required";
+
+  matched: boolean;
+
+  token?: string;
+
+  student_id?: number;
+
+  student_name?: string;
+
+  message?: string;
+}
+
+export interface SubjectResponse {
+  success: boolean;
+  message: string;
+  subject: Subject;
+}
+
+export interface getSubjectResponse{
+  subject_id: number;
+  suject_code: string,
+  name: string;
+  section: string;
+  teacher_id: number;
+  student_count: number;
+  attendance_rate: number;
+}
+
+export interface UploadStudentsResponse {
+
+    success: boolean;
+
+    message: string;
+
+    students: {
+
+        id: number;
+
+        name: string;
+
+        enrollment_number: string;
+
+        is_registered: boolean;
+
+    }[];
+
+}
+
+export interface Subject {
+  subject_id: number;
+  subject_code: string;
+  name: string;
+  section: string;
+  teacher_id: number;
+  student_count: number;
+  attendance_rate: number;
+
+}
+export interface GetSubjectResponse {
+  success: boolean;
+  subjects: Subject[];
+}
+export interface SubjectJoin{
+  success: boolean;
+  message: string;
+  subject: {
+    subject_id: number;
+    subject_code: string;
+    name: string;
+    section: string;
+    teacher_id: number;
+  };
+  enrollment: {
+    subject_id: number;
+    student_id: number;
+
+  }
+}
+export type SubjectColor = "verdant" | "vermilion" | "amber" | "indigo" | "slate";
+
+export type AttendanceStatus = "present" | "absent" | "late" | "excused" | "pending";
+
+export interface AttendanceEntry {
+  session_id: number;
+  subject_id: number;
+  student_id: number;
+
+  status: "present" | "absent" | "late" | "pending";
+
+  method: "face" | "voice" | "manual" | null;
+
+  confidence: number | null;
+
+  marked_at: string | null;
+
+  student: {
+    id: number;
+    name: string;
+    enrollment_number: string;
+  };
+}
+
+export interface GetAttendanceEntriesResponse {
+  success: boolean;
+  entries: AttendanceEntry[];
+}
+
+export interface GetStudentAttendanceEntryResponse {
+  success: boolean;
+  entry: AttendanceEntry | null;
+}
+
+
+export interface AttendanceSession {
+  session_id: number;
+  subject_id: number;
+  teacher_id: number;
+  status: "open" | "closed";
+  opened_at: string;
+  closed_at?: string | null;
+}
+
+export interface AttendanceSession2 {
+  session_id: number;
+  status: "open" | "closed";
+  opened_at: string;
+  closed_at: string | null;
+  subjects: {
+    subject_id: number;
+    name: string;
+    subject_code: string;
+  };
+}
+
+export interface AttendanceSession3 {
+  session_id: number;
+  subject_id: number;
+  teacher_id: number;
+  status: "open" | "closed";
+  opened_at: string;
+  closed_at: string | null;
+  subjects: {
+    subject_id: number;
+    subject_code: string;
+    name: string;
+    section: string;
+  };
+}
+
+export interface GetAttendanceSessionResponse {
+  success: boolean;
+  session: AttendanceSession3;
+  entries: AttendanceEntry[];
+}
+
+export interface GetAttendanceSessionsResponse {
+  success: boolean;
+  sessions: AttendanceSession2[];
+}
+
+export interface CreateAttendanceSessionResponse {
+  success: boolean;
+  message: string;
+  session: AttendanceSession;
+}
+
+export interface AttendanceEntryUpdate {
+  studentId: number;
+  status: "present" | "absent" | "late" | "pending";
+}
+
+export interface UpdateAttendanceSessionRequest {
+  entries: AttendanceEntryUpdate[];
+}
+
+
+export interface UpdateAttendanceSessionResponse {
+  success: boolean;
+  message: string;
+  session: AttendanceSession;
+}
+
+
+export interface AttendanceSummary {
+  subjectId: string;
+  subjectName: string;
+  totalSessions: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  rate: number;
+}
+
+export interface DashboardStat {
+  label: string;
+  value: string;
+  delta?: string;
+  trend?: "up" | "down" | "flat";
+}
+
+
+export interface TeacherLoginResponse {
+  success: boolean;
+  token: string;
+  expiresAt: string;
+  teacher: {
+    id: number;
+    name: string;
+    email: string;
+    role: "teacher";
+  };
+}
+
+export interface AuthSession {
+  token: string;
+  expiresAt: string;
+  user: AuthUser;
+}
+
+export interface UploadTimetableResponse {
+  success: boolean;
+  message: string;
+  filename: string;
+}
+
+export interface UploadStudentDataResponse {
+  success: boolean;
+  message: string;
+  students_added: number;
+  duplicates: number;
+}
+
+export interface AttendanceSummary {
+
+    subject_id: number;
+
+    subject_name: string;
+
+    subject_code: string;
+
+    total: number;
+
+    present: number;
+
+    late: number;
+
+    absent: number;
+
+    percentage: number;
+
+}
+
+export interface AttendanceSummaryResponse {
+
+    success: boolean;
+
+    attendance: AttendanceSummary[];
+
+}

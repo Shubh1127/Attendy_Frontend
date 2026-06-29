@@ -1,0 +1,151 @@
+/* Google Fonts — loaded at runtime from CDN (no build-time fetch).
+   When building with network access, switch app/layout.tsx to use
+   next/font/google instead for optimal self-hosted performance. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Font CSS variables — wired by next/font in production, or fallback below */
+:root {
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 220 33% 97%;
+  --foreground: 222 47% 11%;
+  --surface: 0 0% 100%;
+  --surface-muted: 220 22% 93%;
+  --border: 220 16% 86%;
+  --ruled-line: 220 14% 83%;
+  --muted-foreground: 222 18% 38%;
+
+  --primary: 160 64% 33%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 14 75% 50%;
+  --secondary-foreground: 0 0% 100%;
+  --accent: 38 88% 56%;
+  --accent-foreground: 222 47% 11%;
+  --danger: 4 72% 50%;
+  --danger-foreground: 0 0% 100%;
+}
+
+.dark {
+  --background: 224 45% 8%;
+  --foreground: 220 33% 96%;
+  --surface: 224 38% 11%;
+  --surface-muted: 224 32% 15%;
+  --border: 222 26% 21%;
+  --ruled-line: 222 24% 19%;
+  --muted-foreground: 220 16% 67%;
+
+  --primary: 160 58% 48%;
+  --primary-foreground: 222 47% 8%;
+  --secondary: 14 82% 60%;
+  --secondary-foreground: 222 47% 8%;
+  --accent: 38 90% 62%;
+  --accent-foreground: 222 47% 8%;
+  --danger: 4 78% 62%;
+  --danger-foreground: 222 47% 8%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-feature-settings: "ss01" 1, "cv01" 1;
+}
+
+::selection {
+  background-color: hsl(var(--primary) / 0.22);
+  color: hsl(var(--foreground));
+}
+
+/* Visible keyboard focus everywhere — never suppressed */
+:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- Signature ledger system ---- */
+
+/* A single ruled line, like a register sheet. Used instead of boxed cards
+   for most list content (roster rows, attendance log, subject rows). */
+.ruled-row {
+  border-bottom: 1px solid hsl(var(--ruled-line));
+}
+.ruled-row:first-child {
+  border-top: 1px solid hsl(var(--ruled-line));
+}
+
+/* Faint repeating horizontal rules used as an ambient backdrop texture,
+   echoing lined register paper without being literal. */
+.ledger-field {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 35px,
+    hsl(var(--ruled-line) / 0.5) 35px,
+    hsl(var(--ruled-line) / 0.5) 36px
+  );
+}
+
+/* The ink-stamp seal used as the universal status motif (present / absent /
+   late / pending) instead of generic pill badges. */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  padding: 0.18rem 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+  position: relative;
+}
+.stamp::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  opacity: 0.35;
+}
+
+.scan-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid hsl(var(--primary));
+}

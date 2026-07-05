@@ -43,7 +43,6 @@ function TeacherDashboard() {
         return;
       }
       setSubjects(res.data.subjects);
-      console.log("Subjects loaded:", res.data.subjects);
     });
 
     return () => {
@@ -59,13 +58,11 @@ function TeacherDashboard() {
 
   const handleStartSession = async (subjectId: number) => {
     if (!session) return;
-    console.log("Starting session for subject:", subjectId);
     setOpeningId(subjectId);
-    const res = await endpoints.getAttendanceSessions( subjectId,session.token);
+    const res = await endpoints.createAttendanceSession(session.token, subjectId);
     setOpeningId(null);
     if (res.ok) {
-      console.log("Attendance sessions retrieved:", res.data.sessions);
-      // router.push(`/teacher/attendance/${res.data.sessions[0]?.session_id}/review`);
+      router.push(`/teacher/attendance/${res.data.session.session_id}/review`);
     } else {
       setError("Couldn't open a new session. Try again.");
     }
@@ -98,7 +95,7 @@ function TeacherDashboard() {
         {subjects ? (
           <>
             <StatTile label="Subjects taught" value={`${subjects.length}`} icon={BookOpen} />
-            <StatTile label="Students enrolled" value={`${totalStudents ?? 0}`} icon={Users} />
+            <StatTile label="Students enrolled" value={`${subjects.reduce((sum, s) => sum + (s.student_count ?? 0), 0)}`} icon={Users} />
             <StatTile
               label="Average attendance"
               value={avgRate !== undefined ? formatPercent(avgRate) : "—"}

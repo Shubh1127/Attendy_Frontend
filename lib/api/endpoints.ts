@@ -11,6 +11,7 @@ import type {
   AuthUser,
   SubjectResponse,
   SubjectJoin,
+  getSubject,
   getSubjectResponse,
   GetSubjectResponse,
   CreateAttendanceSessionResponse,
@@ -100,8 +101,8 @@ export const endpoints = {
   async getSubject(
     token: string,
     subject_id: number,
-  ): Promise<ApiResult<getSubjectResponse>> {
-    return apiClient.get<getSubjectResponse>(`/subjects/${subject_id}`, {
+  ): Promise<ApiResult<getSubject>> {
+    return apiClient.get<getSubject>(`/subjects/${subject_id}`, {
       token,
     });
   },
@@ -121,8 +122,8 @@ export const endpoints = {
     );
   },
   async getAttendanceSessions(
-    subjectId: number,
-    token: string ,
+    token: string,
+    subjectId?: number,
   ): Promise<ApiResult<GetAttendanceSessionsResponse>> {
     const url = subjectId
       ? `/attendance/sessions?subjectId=${subjectId}`
@@ -219,7 +220,7 @@ async uploadStudentData(
   subject_id: number,
   formData: FormData,
 ): Promise<ApiResult<UploadStudentDataResponse>> {
-  return apiClient.post<UploadStudentDataResponse>(
+  return apiClient.postForm<UploadStudentDataResponse>(
     `/subjects/${subject_id}/students/upload`,
     formData,
     { token }

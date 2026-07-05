@@ -89,6 +89,24 @@ export interface Subject {
   attendance_rate: number;
 
 }
+export interface getSubject {
+  subject_id: number;
+  subject_code: string;
+  name: string;
+  section: string;
+  teacher_id: number;
+
+  studentCount: number;
+  totalSessions: number;
+
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+
+  attendanceRate: number;
+}
+
 export interface GetSubjectResponse {
   success: boolean;
   subjects: Subject[];
@@ -153,16 +171,14 @@ export interface AttendanceSession {
   closed_at?: string | null;
 }
 
-export interface AttendanceSession2 {
+export interface AttendanceSessionSummary {
   session_id: number;
-  status: "open" | "closed";
+  subject_id: number;
+  teacher_id: number;
+  status: "closed";
   opened_at: string;
   closed_at: string | null;
-  subjects: {
-    subject_id: number;
-    name: string;
-    subject_code: string;
-  };
+  subject_name: string | null;
 }
 
 export interface AttendanceSession3 {
@@ -188,7 +204,7 @@ export interface GetAttendanceSessionResponse {
 
 export interface GetAttendanceSessionsResponse {
   success: boolean;
-  sessions: AttendanceSession2[];
+  sessions: AttendanceSessionSummary[];
 }
 
 export interface CreateAttendanceSessionResponse {

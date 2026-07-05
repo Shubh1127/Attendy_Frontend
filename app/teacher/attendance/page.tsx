@@ -13,10 +13,8 @@ import { Notice } from "@/components/ui/Notice";
 import { Button } from "@/components/ui/Button";
 import { endpoints } from "@/lib/api/endpoints";
 import { useSession } from "@/lib/hooks/useSession";
-import type { AttendanceSummary, Subject } from "@/lib/api/types";
+import type { AttendanceSessionSummary, AttendanceSummary, Subject } from "@/lib/api/types";
 import { formatPercent } from "@/lib/utils/format";
-import { subjectColorMap } from "@/lib/theme/subjectColors";
-import { cn } from "@/lib/utils/cn";
 
 export default function TeacherAttendancePage() {
   return (
@@ -31,39 +29,38 @@ function TeacherAttendance() {
   const router = useRouter();
   const [subjects, setSubjects] = useState<Subject[] | null>(null);
   const [summaries, setSummaries] = useState<AttendanceSummary[] | null>(null);
+  const [pastSessions, setPastSessions] = useState<AttendanceSessionSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<string | null>(null);
-
-
-  console.log("Helloooooooooooooooooooo",session?.user);
-  console.log("session id---------------",session?.user.id)
 
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
 
     async function load() {
-      const [subjectsRes, summaryRes] = await Promise.all([
-        endpoints.listSubjects(session!.token),
+      const [subjectsRes, summaryRes, sessionsRes] = await Promise.all([
+        endpoints.getSubjects(session!.token),
         endpoints.getAttendanceSummary(session!.token),
+        endpoints.getAttendanceSessions(session!.token),
       ]);
       if (cancelled) return;
       if (!subjectsRes.ok) { setError("Couldn't load sessions data."); return; }
-      setSubjects(subjectsRes.data);
-      if (summaryRes.ok) setSummaries(summaryRes.data);
+      setSubjects(subjectsRes.data.subjects);
+      if (summaryRes.ok) setSummaries(summaryRes.data.attendance);
+      if (sessionsRes.ok) setPastSessions(sessionsRes.data.sessions);
     }
 
     load();
     return () => { cancelled = true; };
   }, [session]);
 
-  const handleStart = async (subjectId: string) => {
+  const handleStart = async (subjectId: number) => {
     if (!session) return;
-    setOpeningId(subjectId);
-    const res = await endpoints.openAttendanceSession(subjectId, session.token);
+    setOpeningId(String(subjectId));
+    const res = await endpoints.createAttendanceSession(session.token, subjectId);
     setOpeningId(null);
     if (res.ok) {
-      router.push(`/teacher/attendance/${res.data.id}/review`);
+      router.push(`/teacher/attendance/${res.data.session.session_id}/review`);
     } else {
       setError("Couldn't open a session. Try again.");
     }
@@ -125,24 +122,21 @@ function TeacherAttendance() {
         ) : (
           <div className="rounded-lg border border-border bg-surface px-5">
             {subjects.map((s) => {
-              const palette = subjectColorMap[s.color];
-              const summary = summaries?.find((r) => r.subjectId === s.id);
               return (
-                <div key={s.id} className="ruled-row flex flex-wrap items-center justify-between gap-3 py-4">
+                <div key={s.subject_id} className="ruled-row flex flex-wrap items-center justify-between gap-3 py-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className={cn("h-8 w-1 rounded-full shrink-0", palette.bar)} aria-hidden />
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{s.name}</p>
                       <p className="font-mono text-xs text-muted">
-                        {s.code} · {summary ? `${formatPercent(summary.rate)} overall` : s.schedule}
+                        {s.subject_code} · {s.section}
                       </p>
                     </div>
                   </div>
                   <Button
                     size="sm"
                     leftIcon={<Zap className="h-3.5 w-3.5" />}
-                    isLoading={openingId === s.id}
-                    onClick={() => handleStart(s.id)}
+                    isLoading={openingId === String(s.subject_id)}
+                    onClick={() => handleStart(s.subject_id)}
                   >
                     Open session
                   </Button>
@@ -157,34 +151,44 @@ function TeacherAttendance() {
       <section className="space-y-4">
         <h2 className="font-display text-xl font-medium text-foreground">Past sessions</h2>
 
-        {summaries === null ? (
+        {pastSessions === null ? (
           <div className="rounded-lg border border-border bg-surface px-5">
             <SkeletonRow /><SkeletonRow /><SkeletonRow /><SkeletonRow />
           </div>
-        ) : !summaries.length ? null : (
+        ) : !pastSessions.length ? (
+          <EmptyState
+            icon={ScanFace}
+            title="No closed sessions yet"
+            description="Closed attendance sessions will appear here once you finish a roll call."
+          />
+        ) : (
           <div className="rounded-lg border border-border bg-surface px-5">
-            {/* Simulated session rows — real API would return a sessions list */}
-            {summaries.flatMap((s, si) =>
-              [
-                { date: "21 Jun 2026", present: Math.round(s.present * 0.35), total: Math.round(s.totalSessions * 0.35) },
-                { date: "19 Jun 2026", present: Math.round(s.present * 0.32), total: Math.round(s.totalSessions * 0.32) },
-              ].map((row, ri) => (
-                <Link
-                  key={`${s.subjectId}-${ri}`}
-                  href={`/teacher/attendance/sess_today/review`}
-                  className="ruled-row flex items-center justify-between gap-4 py-4 group hover:bg-surface-muted -mx-5 px-5 transition-colors"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{s.subjectName}</p>
-                    <p className="font-mono text-xs text-muted">{row.date}</p>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-muted">
-                    <span className="hidden sm:inline">{row.present} present of {s.totalSessions} students</span>
-                    <ChevronRight className="h-4 w-4 text-muted group-hover:text-foreground transition-colors" />
-                  </div>
-                </Link>
-              ))
-            )}
+            {pastSessions.map((sessionRow) => (
+              <Link
+                key={sessionRow.session_id}
+                href={`/teacher/attendance/${sessionRow.session_id}/review`}
+                className="ruled-row flex items-center justify-between gap-4 py-4 group hover:bg-surface-muted -mx-5 px-5 transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {sessionRow.subject_name ?? "Unknown subject"}
+                  </p>
+                  <p className="font-mono text-xs text-muted">
+                    {new Date(sessionRow.closed_at ?? sessionRow.opened_at).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-muted">
+                  <span className="hidden sm:inline">
+                    Closed session #{sessionRow.session_id}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-muted group-hover:text-foreground transition-colors" />
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </section>

@@ -25,6 +25,7 @@ export default function TeacherSubjectsPage() {
 function TeacherSubjects() {
   const { session } = useSession();
   const [subjects, setSubjects] = useState<Subject[] | null>(null);
+  const [section,setSection] = useState("")
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // Create-subject panel state
@@ -87,7 +88,7 @@ function TeacherSubjects() {
     const res = await endpoints.createSubject(session.token, {
       subject_code: code.trim(),
       name: name.trim(),
-      section: schedule.trim(),
+      section: section.trim(),
     });
     setCreating(false);
     if (!res.ok) {
@@ -228,6 +229,18 @@ function TeacherSubjects() {
                     }}
                     className="font-mono uppercase tracking-wider"
                   />
+                  <div>
+                    <TextField
+                    label="Section"
+                    placeholder="e.g. A"
+                    value={section}
+                    onChange={(e) => {
+                      setSection(e.target.value.toUpperCase());
+                      setCreateError(null);
+                    }}
+                    className="font-mono uppercase tracking-wider"
+                  />
+                  </div>
                   <div className="sm:col-span-2">
                     <TextField
                       label="Schedule (optional)"

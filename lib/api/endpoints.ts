@@ -121,8 +121,8 @@ export const endpoints = {
     );
   },
   async getAttendanceSessions(
-    token: string,
-    subjectId?: number,
+    subjectId: number,
+    token: string ,
   ): Promise<ApiResult<GetAttendanceSessionsResponse>> {
     const url = subjectId
       ? `/attendance/sessions?subjectId=${subjectId}`
@@ -182,8 +182,9 @@ export const endpoints = {
 
 
   async uploadStudents(
-    pdf: File,
     token: string
+    ,subjectId: number,
+    pdf: File,
 ): Promise<ApiResult<UploadStudentsResponse>> {
 
     const form = new FormData();
@@ -194,7 +195,7 @@ export const endpoints = {
     );
 
     return apiClient.postForm(
-        "/students/upload",
+      `/subjects/${subjectId}/students/upload`,
         form,
         {
             token
@@ -203,12 +204,11 @@ export const endpoints = {
 
 },
 async uploadTimetable(
-  token: string,
-  subject_id: number,
   formData: FormData,
+  token: string,
 ): Promise<ApiResult<UploadTimetableResponse>> {
   return apiClient.post<UploadTimetableResponse>(
-    `/subjects/${subject_id}/upload-timetable`,
+    "/subjects/upload-timetable",
     formData,
     { token }
   );
@@ -220,7 +220,7 @@ async uploadStudentData(
   formData: FormData,
 ): Promise<ApiResult<UploadStudentDataResponse>> {
   return apiClient.post<UploadStudentDataResponse>(
-    `/subjects/${subject_id}/upload-students`,
+    `/subjects/${subject_id}/students/upload`,
     formData,
     { token }
   );

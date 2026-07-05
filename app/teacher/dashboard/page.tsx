@@ -30,7 +30,7 @@ function TeacherDashboard() {
   const router = useRouter();
   const [subjects, setSubjects] = useState<Subject[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [openingId, setOpeningId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!session) return;
@@ -43,6 +43,7 @@ function TeacherDashboard() {
         return;
       }
       setSubjects(res.data.subjects);
+      console.log("Subjects loaded:", res.data.subjects);
     });
 
     return () => {
@@ -56,13 +57,15 @@ function TeacherDashboard() {
       ? subjects.reduce((sum, s) => sum + (s.attendance_rate ?? 0), 0) / subjects.length
       : undefined;
 
-  const handleStartSession = async (subjectId: string) => {
+  const handleStartSession = async (subjectId: number) => {
     if (!session) return;
+    console.log("Starting session for subject:", subjectId);
     setOpeningId(subjectId);
-    const res = await endpoints.getAttendanceSessions(subjectId, session.token);
+    const res = await endpoints.getAttendanceSessions( subjectId,session.token);
     setOpeningId(null);
     if (res.ok) {
-      router.push(`/teacher/attendance/${res.data.sessions[0]?.session_id}/review`);
+      console.log("Attendance sessions retrieved:", res.data.sessions);
+      // router.push(`/teacher/attendance/${res.data.sessions[0]?.session_id}/review`);
     } else {
       setError("Couldn't open a new session. Try again.");
     }
@@ -76,9 +79,9 @@ function TeacherDashboard() {
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="flex flex-col gap-1"
       >
-        <p className="font-mono text-eyebrow uppercase text-muted">
-          {session?.user.department ?? "Faculty"}
-        </p>
+        {/* <p className="font-mono text-eyebrow uppercase text-muted">
+          {session?.user?.department ?? "Faculty"}
+        </p> */}
         <h1 className="font-display text-display-md font-medium text-foreground">
           Good to see you, {session?.user.name.split(" ").slice(-1)[0]}.
         </h1>
@@ -148,8 +151,8 @@ function TeacherDashboard() {
                   size="sm"
                   variant="outline"
                   leftIcon={<Zap className="h-3.5 w-3.5" />}
-                  isLoading={openingId === subject.subject_id.toString()}
-                  onClick={() => handleStartSession(subject.subject_id.toString())}
+                  isLoading={openingId === subject.subject_id}
+                  onClick={() => handleStartSession(subject.subject_id)}
                 >
                   Open session
                 </Button>

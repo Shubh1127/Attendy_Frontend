@@ -30,7 +30,7 @@ const STATUS_OPTIONS: AttendanceStatus[] = ["present", "absent", "late", "excuse
 type EntryOverride = { id: string; status: AttendanceStatus };
 
 function ReviewPage() {
-  const params = useParams<{ sessionId: string }>();
+  // const params = useParams<{ sessionId: number }>();
   const { session } = useSession();
   const router = useRouter();
 
@@ -41,22 +41,22 @@ function ReviewPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
 
-  useEffect(() => {
-    if (!session || !params.sessionId) return;
-    let cancelled = false;
+  // useEffect(() => {
+  //   if (!session || !params.sessionId) return;
+  //   let cancelled = false;
 
-    endpoints.getAttendanceSession(params.sessionId, session.token).then((res) => {
-      if (cancelled) return;
-      if (!res.ok) { setLoadError("Couldn't load the attendance session."); return; }
-      setAttendanceSession(res.data);
-      // Seed overrides from biometric results so teacher sees the initial state
-      const initial: Record<string, AttendanceStatus> = {};
-      res.data.entries.forEach((e) => { initial[e.id] = e.status; });
-      setOverrides(initial);
-    });
+  //   endpoints.getAttendanceSession(params.sessionId, session.token).then((res) => {
+  //     if (cancelled) return;
+  //     if (!res.ok) { setLoadError("Couldn't load the attendance session."); return; }
+  //     setAttendanceSession(res.data);
+  //     // Seed overrides from biometric results so teacher sees the initial state
+  //     const initial: Record<string, AttendanceStatus> = {};
+  //     res.data.entries.forEach((e) => { initial[e.id] = e.status; });
+  //     setOverrides(initial);
+  //   });
 
-    return () => { cancelled = true; };
-  }, [session, params.sessionId]);
+  //   return () => { cancelled = true; };
+  // }, [session, params.sessionId]);
 
   const handleOverride = (entryId: string, status: AttendanceStatus) => {
     setOverrides((prev) => ({ ...prev, [entryId]: status }));
@@ -67,27 +67,28 @@ function ReviewPage() {
     setSubmitting(true);
     setSubmitError(null);
 
-    const entries: EntryOverride[] = attendanceSession.entries.map((e) => ({
-      id: e.id,
-      status: overrides[e.id] ?? e.status,
-    }));
+    // const entries: EntryOverride[] = attendanceSession.entries.map((e) => ({
+    //   id: e.id,
+    //   status: overrides[e.id] ?? e.status,
+    // }));
 
-    const res = await endpoints.reviewAttendanceSession(attendanceSession.id, entries, session.token);
-    setSubmitting(false);
+    // const res = await endpoints.reviewAttendanceSession(attendanceSession.id, entries, session.token);
+    // setSubmitting(false);
 
-    if (!res.ok) {
-      setSubmitError("Couldn't submit the session. Please try again.");
-      return;
-    }
-    setConfirmed(true);
+    // if (!res.ok) {
+    //   setSubmitError("Couldn't submit the session. Please try again.");
+    //   return;
+    // }
+    // setConfirmed(true);
   };
 
-  const presentCount = attendanceSession
-    ? attendanceSession.entries.filter((e) => (overrides[e.id] ?? e.status) === "present").length
-    : 0;
+  // const presentCount = attendanceSession
+  //   ? attendanceSession.entries.filter((e) => (overrides[e.id] ?? e.status) === "present").length
+  //   : 0;
 
   if (confirmed) {
-    return <ConfirmedView sessionName={attendanceSession?.subjectName ?? "Session"} router={router} />;
+    // return <ConfirmedView sessionName={attendanceSession?.subjectName ?? "Session"} router={router} />;
+    return <ConfirmedView sessionName={"Machine Learning"} router={router} />;
   }
 
   return (
@@ -109,15 +110,19 @@ function ReviewPage() {
           <div>
             <p className="font-mono text-eyebrow uppercase text-muted">Review & confirm</p>
             <h1 className="font-display text-display-md font-medium text-foreground">
-              {attendanceSession?.subjectName ?? "Loading session…"}
+              {/* {attendanceSession?.subjectName ?? "Loading session…"} */}
+              <h1>Machine Learning</h1>
             </h1>
-            {attendanceSession && (
+            {/* {attendanceSession && (
               <p className="text-sm text-muted mt-1">
                 {attendanceSession.date} · Opened at {attendanceSession.openedAt} ·{" "}
                 <span className="font-medium text-foreground">{presentCount} present</span> of{" "}
                 {attendanceSession.entries.length}
               </p>
-            )}
+            )} */}
+            <h2>5/7/2026 . Opened at 9:00 AM</h2>
+            <br />
+            <h2>3 present of 30</h2>
           </div>
           <Button
             leftIcon={<CheckCircle2 className="h-4 w-4" />}
@@ -152,7 +157,7 @@ function ReviewPage() {
           </div>
         ) : (
           <div className="px-5">
-            {attendanceSession.entries.map((entry, i) => (
+            {/* {attendanceSession.entries.map((entry, i) => (
               <EntryRow
                 key={entry.id}
                 entry={entry}
@@ -160,7 +165,7 @@ function ReviewPage() {
                 index={i}
                 onOverride={(status) => handleOverride(entry.id, status)}
               />
-            ))}
+            ))} */}
           </div>
         )}
       </div>
@@ -170,8 +175,9 @@ function ReviewPage() {
         <div className="fixed inset-x-0 bottom-16 z-20 flex justify-center md:hidden">
           <div className="mx-5 w-full max-w-sm rounded-lg border border-border bg-surface shadow-lift px-4 py-3 flex items-center justify-between gap-4">
             <p className="text-sm text-muted">
-              <span className="font-medium text-foreground">{presentCount}</span> of{" "}
-              {attendanceSession.entries.length} present
+              {/* <span className="font-medium text-foreground">{presentCount}</span> of{" "}
+              {attendanceSession.entries.length} present */}
+              <span className="font-medium text-foreground">3</span> of 30 present
             </p>
             <Button
               size="sm"
@@ -210,12 +216,14 @@ function EntryRow({
     >
       {/* Student */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <Avatar name={entry.studentName} size="sm" />
+        {/* <Avatar name={entry.studentName} size="sm" /> */}
         <div className="min-w-0">
           <p className={cn("text-sm font-medium truncate", isDirty ? "text-accent-foreground" : "text-foreground")}>
-            {entry.studentName}
+            {/* {entry.studentName} */}
+        <h2>Shubham</h2>
           </p>
-          <p className="font-mono text-xs text-muted">{entry.rollNumber}</p>
+          {/* <p className="font-mono text-xs text-muted">{entry.rollNumber}</p> */}
+          <p className="font-mono text-xs text-muted">231302075</p>
         </div>
       </div>
 
@@ -229,9 +237,10 @@ function EntryRow({
                 : <Mic className="h-3 w-3" />}
               <span className="capitalize">{entry.method}</span>
             </div>
-            {entry.confidence !== undefined && (
-              <p className="font-mono text-[11px] text-muted">{formatConfidence(entry.confidence)}</p>
-            )}
+            {/* {entry.confidence !== undefined && (
+              // <p className="font-mono text-[11px] text-muted">{formatConfidence(entry.confidence)}</p>
+            )} */}
+            <p className="font-mono text-[11px] text-muted">Confidence: 0.85</p>
           </>
         ) : (
           <p className="text-xs text-muted">—</p>
@@ -240,7 +249,7 @@ function EntryRow({
 
       {/* Override picker */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        {STATUS_OPTIONS.map((s) => (
+        {/* {STATUS_OPTIONS.map((s) => (
           <button
             key={s}
             onClick={() => onOverride(s)}
@@ -253,7 +262,8 @@ function EntryRow({
           >
             <Stamp status={s} />
           </button>
-        ))}
+        ))} */}
+
       </div>
     </motion.div>
   );

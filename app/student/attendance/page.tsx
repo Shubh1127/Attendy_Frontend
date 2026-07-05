@@ -4,17 +4,17 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { CalendarClock } from "lucide-react";
 import { RoleGate } from "@/components/layout/RoleGate";
-import { ProgressRing } from "@/components/ui/ProgressRing";
-import { Stamp } from "@/components/ui/Stamp";
-import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
+// import { ProgressRing } from "@/components/ui/ProgressRing";
+// import { Stamp } from "@/components/ui/Stamp";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Notice } from "@/components/ui/Notice";
 import { endpoints } from "@/lib/api/endpoints";
 import { useSession } from "@/lib/hooks/useSession";
 import type { AttendanceSummary, Subject } from "@/lib/api/types";
-import { formatPercent } from "@/lib/utils/format";
-import { subjectColorMap } from "@/lib/theme/subjectColors";
-import { cn } from "@/lib/utils/cn";
+// import { formatPercent } from "@/lib/utils/format";
+// import { subjectColorMap } from "@/lib/theme/subjectColors";
+// import { cn } from "@/lib/utils/cn";
 
 export default function StudentAttendancePage() {
   return (

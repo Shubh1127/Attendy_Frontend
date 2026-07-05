@@ -34,6 +34,10 @@ function TeacherAttendance() {
   const [error, setError] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<string | null>(null);
 
+
+  console.log("Helloooooooooooooooooooo",session?.user);
+  console.log("session id---------------",session?.user.id)
+
   useEffect(() => {
     if (!session) return;
     let cancelled = false;

@@ -73,17 +73,9 @@ export interface UploadStudentsResponse {
 
     message: string;
 
-    students: {
+  students_added: number;
 
-        id: number;
-
-        name: string;
-
-        enrollment_number: string;
-
-        is_registered: boolean;
-
-    }[];
+  students_enrolled: number;
 
 }
 
@@ -269,7 +261,7 @@ export interface UploadStudentDataResponse {
   success: boolean;
   message: string;
   students_added: number;
-  duplicates: number;
+  students_enrolled: number;
 }
 
 export interface AttendanceSummary {

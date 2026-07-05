@@ -28,15 +28,13 @@ function TeacherSubjects() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // Create-subject panel state
-  type PanelType = "subject" | "timetable" | "students" | null;
+  type PanelType = "subject" | "timetable" | null;
 
   const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [name, setName] = useState("");
   const [timetableFile, setTimetableFile] = useState<File | null>(null);
   const [uploadingTimetable, setUploadingTimetable] = useState(false);
   const timetableInputRef = useRef<HTMLInputElement>(null);
-  const [studentFile, setStudentFile] = useState<File | null>(null);
-  const [uploadingStudents, setUploadingStudents] = useState(false);
   const [code, setCode] = useState("");
   const [schedule, setSchedule] = useState("");
   const [creating, setCreating] = useState(false);
@@ -115,19 +113,6 @@ function TeacherSubjects() {
     setUploadingTimetable(false);
   };
 
-  const handleUploadStudents = async () => {
-    if (!studentFile || !session) return;
-
-    const formData = new FormData();
-    formData.append("file", studentFile);
-
-    setUploadingStudents(true);
-
-    await endpoints.uploadStudents(formData, session.token);
-
-    setUploadingStudents(false);
-  };
-
   return (
     <div className="space-y-8">
       <motion.div
@@ -164,15 +149,6 @@ function TeacherSubjects() {
             Upload Timetable
           </Button>
 
-          <Button
-            size="sm"
-            variant={activePanel === "students" ? "outline" : "secondary"}
-            onClick={() =>
-              setActivePanel(activePanel === "students" ? null : "students")
-            }
-          >
-            Upload Students
-          </Button>
         </div>
       </motion.div>
 
@@ -306,36 +282,6 @@ function TeacherSubjects() {
             onClick={handleUploadTimetable}
           >
             Upload PDF
-          </Button>
-        </div>
-      )}
-
-      {activePanel === "students" && (
-        <div className="rounded-lg border border-border bg-surface p-6 space-y-5">
-          <div>
-            <h3 className="font-display text-lg">Upload Student Data</h3>
-
-            <p className="text-sm text-muted">
-              Upload the class list PDF. Student records will be created
-              automatically.
-            </p>
-          </div>
-
-          <input
-            type="file"
-            accept=".pdf"
-            onChange={(e) => setStudentFile(e.target.files?.[0] ?? null)}
-          />
-
-          {studentFile && (
-            <p className="text-sm">
-              Selected:
-              <span className="font-medium"> {studentFile.name}</span>
-            </p>
-          )}
-
-          <Button isLoading={uploadingStudents} onClick={handleUploadStudents}>
-            Upload Student PDF
           </Button>
         </div>
       )}

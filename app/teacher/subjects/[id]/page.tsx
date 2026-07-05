@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Check, ChevronLeft, Copy, Users, Zap } from "lucide-react";
@@ -39,6 +39,10 @@ function SubjectDetail() {
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [studentFile, setStudentFile] = useState<File | null>(null);
+  const [uploadingStudents, setUploadingStudents] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const studentInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!session || !params.id) return;
@@ -76,6 +80,39 @@ function SubjectDetail() {
       router.push(`/teacher/attendance/${res.data.id}/review`);
     } else {
       setError("Couldn't open a session. Please try again.");
+    }
+  };
+
+  const handleUploadStudents = async () => {
+    if (!session || !subject || !studentFile) return;
+
+    const subjectId = Number(params.id);
+    if (Number.isNaN(subjectId)) {
+      setError("Invalid subject ID.");
+      return;
+    }
+
+    setUploadingStudents(true);
+    setUploadMessage(null);
+
+    const formData = new FormData();
+    formData.append("file", studentFile);
+
+    const res = await endpoints.uploadStudentData(session.token, subjectId, formData);
+
+    setUploadingStudents(false);
+
+    if (!res.ok) {
+      setError(res.error.message || "Couldn't upload students. Please try again.");
+      return;
+    }
+
+    setUploadMessage(
+      `Added ${res.data.students_added} student${res.data.students_added === 1 ? "" : "s"} and enrolled ${res.data.students_enrolled} of them in this subject.`,
+    );
+    setStudentFile(null);
+    if (studentInputRef.current) {
+      studentInputRef.current.value = "";
     }
   };
 
@@ -211,6 +248,38 @@ function SubjectDetail() {
               </div>
             </div>
           )}
+
+          <div className="rounded-lg border border-border bg-surface p-6 space-y-4">
+            <div>
+              <p className="font-display text-base font-medium text-foreground">Upload students</p>
+              <p className="text-sm text-muted mt-0.5">
+                Upload the class roster PDF for this subject. The backend will extract each student name and enrollment number, create missing records, and link the students to this subject.
+              </p>
+            </div>
+
+            <input
+              ref={studentInputRef}
+              type="file"
+              accept=".pdf"
+              onChange={(e) => setStudentFile(e.target.files?.[0] ?? null)}
+            />
+
+            {studentFile && (
+              <p className="text-sm text-muted">
+                Selected: <span className="font-medium text-foreground">{studentFile.name}</span>
+              </p>
+            )}
+
+            {uploadMessage && <Notice tone="success" title={uploadMessage} />}
+
+            <Button
+              isLoading={uploadingStudents}
+              onClick={handleUploadStudents}
+              disabled={!studentFile}
+            >
+              Upload student PDF
+            </Button>
+          </div>
         </>
       )}
     </div>

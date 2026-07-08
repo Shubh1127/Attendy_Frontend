@@ -1,6 +1,6 @@
 import { apiClient, type ApiResult } from "./client";
 import { env } from "./env";
-import { mocks } from "./mocks";
+
 import type {
   AttendanceSession,
   AttendanceSummary,
@@ -16,14 +16,20 @@ import type {
   GetSubjectResponse,
   CreateAttendanceSessionResponse,
   GetAttendanceSessionsResponse,
+  GetTeacherActiveAttendanceSessionsResponse,
   GetAttendanceSessionResponse,
+  GetActiveAttendanceResponse,
   AttendanceEntryUpdate,
   UpdateAttendanceSessionResponse,
   GetAttendanceEntriesResponse,
   AttendanceSummaryResponse,
+  CheckInAttendanceResponse,
+  GetStudentSubjectAttendanceSessionsResponse,
   UploadStudentsResponse,
   UploadStudentDataResponse,
   UploadTimetableResponse,
+  GetStudentAttendanceSessionsResponse,
+  StudentOverallAttendanceResponse,
 } from "./types";
 
 /**
@@ -121,6 +127,15 @@ export const endpoints = {
       { token },
     );
   },
+
+  async getStudentAttendanceSessions(
+  token: string
+): Promise<ApiResult<GetStudentAttendanceSessionsResponse>> {
+  return apiClient.get<GetStudentAttendanceSessionsResponse>(
+    "/student/attendance-sessions",
+    { token }
+  );
+},
   async getAttendanceSessions(
     token: string,
     subjectId?: number,
@@ -132,6 +147,15 @@ export const endpoints = {
     return apiClient.get<GetAttendanceSessionsResponse>(url, {
       token,
     });
+  },
+
+  async getTeacherActiveAttendanceSessions(
+    token: string,
+  ): Promise<ApiResult<GetTeacherActiveAttendanceSessionsResponse>> {
+    return apiClient.get<GetTeacherActiveAttendanceSessionsResponse>(
+      "/attendance/sessions/active",
+      { token },
+    );
   },
 
   async getAttendanceSession(
@@ -179,6 +203,46 @@ export const endpoints = {
     return apiClient.get<AttendanceSummaryResponse>("/student/attendance", {
       token,
     });
+  },
+
+  async getStudentOverallAttendance(
+    token: string,
+  ): Promise<ApiResult<StudentOverallAttendanceResponse>> {
+    return apiClient.get<StudentOverallAttendanceResponse>("/student/overall-attendance", {
+      token,
+    });
+  },
+  async getActiveAttendance(
+    token: string,
+  ): Promise<ApiResult<GetActiveAttendanceResponse>> {
+    return apiClient.get<GetActiveAttendanceResponse>("/student/attendance/active", {
+      token,
+    });
+  },
+
+  async getStudentSubjectAttendanceSessions(
+    token: string,
+    subjectId: number,
+  ): Promise<ApiResult<GetStudentSubjectAttendanceSessionsResponse>> {
+    return apiClient.get<GetStudentSubjectAttendanceSessionsResponse>(
+      `/student/subjects/${subjectId}/attendance-sessions`,
+      { token },
+    );
+  },
+
+  async checkInAttendance(
+    token: string,
+    sessionId: number,
+    faceImage: Blob,
+  ): Promise<ApiResult<CheckInAttendanceResponse>> {
+    const form = new FormData();
+    form.append("faceImage", faceImage, "face.jpg");
+
+    return apiClient.postForm<CheckInAttendanceResponse>(
+      `/student/attendance/${sessionId}/check-in`,
+      form,
+      { token },
+    );
   },
 
 

@@ -27,13 +27,33 @@ function StudentSubjects() {
   const [subjects, setSubjects] = useState<Subject[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  type JoinedSubject = {
+    subject_id: number;
+    subject_code: string;
+    name: string;
+    section: string;
+    teacher_id: number;
+  };
+
   // Join-subject panel state
   const [panelOpen, setPanelOpen] = useState(false);
   const [code, setCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
-  const [joinedSubject, setJoinedSubject] = useState<Subject | null>(null);
+  const [joinedSubject, setJoinedSubject] = useState<JoinedSubject | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const loadSubjects = async () => {
+    if (!session) return;
+
+    const res = await endpoints.getSubjects(session.token);
+    if (!res.ok) {
+      setLoadError("Couldn't load your subjects. Please try again.");
+      return;
+    }
+
+    setSubjects(res.data.subjects);
+  };
 
   useEffect(() => {
     if (!session) return;
@@ -64,7 +84,7 @@ function StudentSubjects() {
     if (!session || !code.trim()) return;
     setJoining(true);
     setJoinError(null);
-    const res = await endpoints.joinSubject(code.trim(), session.token);
+    const res = await endpoints.joinSubject(session.token, { code: code.trim() });
     setJoining(false);
     if (!res.ok) {
       setJoinError(
@@ -73,10 +93,7 @@ function StudentSubjects() {
       return;
     }
     setJoinedSubject(res.data.subject);
-
-    setSubjects((prev) =>
-      prev ? [...prev, res.data.subject] : [res.data.subject],
-    );
+    await loadSubjects();
   };
 
   return (
@@ -211,12 +228,7 @@ function StudentSubjects() {
                 ease: [0.16, 1, 0.3, 1],
               }}
             >
-              {/* <SubjectTile
-    subject={subject}
-    href={`/student/subjects/${subject.subject_id}`}
-/> */}
-
-              <SubjectTile subject={subject} href="#" />
+              <SubjectTile subject={subject} href={`/student/subjects/${subject.subject_id}`} />
             </motion.div>
           ))}
         </div>

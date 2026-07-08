@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Stamp } from "@/components/ui/Stamp";
 import { endpoints } from "@/lib/api/endpoints";
 import { useSession } from "@/lib/hooks/useSession";
-import type {  AttendanceSummary, getSubject } from "@/lib/api/types";
+import type { AttendanceSummary, getSubject } from "@/lib/api/types";
 import { formatPercent } from "@/lib/utils/format";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
@@ -48,16 +48,24 @@ function SubjectDetail() {
     // console.log("session", session);
     async function load() {
       // In mock mode the id comes from mockSubjects; real API would be GET /subjects/:id
-      const subjectsRes = await endpoints.getSubject(session!.token, paramassubjectId);
+      const subjectsRes = await endpoints.getSubject(
+        session!.token,
+        paramassubjectId,
+      );
       if (cancelled) return;
-      if (!subjectsRes.ok) { setError("Couldn't load subject details."); return; }
+      if (!subjectsRes.ok) {
+        setError(subjectsRes.error.message);
+        return;
+      }
       setSubject(subjectsRes.data);
-     
+
       // console.log("subjectRes",subjectsRes)
     }
     // console.log("subjectres", subject);
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [session, params.id]);
 
   const handleCopyCode = () => {
@@ -97,12 +105,18 @@ function SubjectDetail() {
 
     // console.log(studentFile);
     // console.log(studentFile instanceof File);
-    const res = await endpoints.uploadStudentData(session.token, subjectId, formData);
+    const res = await endpoints.uploadStudentData(
+      session.token,
+      subjectId,
+      formData,
+    );
 
     setUploadingStudents(false);
 
     if (!res.ok) {
-      setError(res.error.message || "Couldn't upload students. Please try again.");
+      setError(
+        res.error.message || "Couldn't upload students. Please try again.",
+      );
       return;
     }
 
@@ -123,7 +137,9 @@ function SubjectDetail() {
       <div className="space-y-8">
         <Skeleton className="h-8 w-64" />
         <div className="grid grid-cols-3 gap-6">
-          <Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
         </div>
         <Skeleton className="h-48 w-full" />
       </div>
@@ -153,22 +169,30 @@ function SubjectDetail() {
                 aria-hidden
               />
               <div>
-                <p className={cn("font-mono text-eyebrow uppercase")}>{subject.subject_code}</p>
-                <h1 className="font-display text-display-md font-medium text-foreground">{subject.name}</h1>
+                <p className={cn("font-mono text-eyebrow uppercase")}>
+                  {subject.subject_code}
+                </p>
+                <h1 className="font-display text-display-md font-medium text-foreground">
+                  {subject.name}
+                </h1>
 
-                <p className="text-sm text-muted mt-1">{ "Schedule not set"}</p>
+                <p className="text-sm text-muted mt-1">{"Schedule not set"}</p>
               </div>
             </div>
-            <Button
-              leftIcon={<Zap className="h-4 w-4" />}
-              isLoading={opening}
-              
-            >
+            <Button leftIcon={<Zap className="h-4 w-4" />} isLoading={opening}>
               Start roll call
             </Button>
           </div>
         ) : (
-          error && <Notice tone="error" title="Failed to load subject" description={error} />
+          error && (
+            <Notice
+              tone="error"
+              size="large" // ← Use "xl" for maximum size
+              title="Failed to load subject"
+              description={error}
+              className="mt-8"
+            />
+          )
         )}
       </motion.div>
 
@@ -188,10 +212,18 @@ function SubjectDetail() {
             />
             <StatTile
               label="Attendance rate"
-              value={subject.attendanceRate !== undefined ? formatPercent(subject.attendanceRate) : "—"}
-              trend={subject.attendanceRate !== undefined
-                ? subject.attendanceRate >= 0.85 ? "up" : "down"
-                : "flat"}
+              value={
+                subject.attendanceRate !== undefined
+                  ? formatPercent(subject.attendanceRate)
+                  : "—"
+              }
+              trend={
+                subject.attendanceRate !== undefined
+                  ? subject.attendanceRate >= 0.85
+                    ? "up"
+                    : "down"
+                  : "flat"
+              }
             />
             <StatTile
               label="Absences"
@@ -204,83 +236,94 @@ function SubjectDetail() {
           <div className="rounded-lg border border-border bg-surface">
             <div className="flex items-center justify-between border-b border-border px-6 py-4">
               <div>
-                <p className="font-display text-base font-medium text-foreground">Share with students</p>
+                <p className="font-display text-base font-medium text-foreground">
+                  Share with students
+                </p>
                 <p className="text-sm text-muted mt-0.5">
-                  Students enter this code in Snap Class to join and register their biometrics.
+                  Students enter this code in Snap Class to join and register
+                  their biometrics.
                 </p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-4 px-6 py-5">
               <div className="flex items-center gap-3">
-                <span className={cn(
-                  "rounded-md px-5 py-3 font-mono text-2xl font-semibold tracking-widest",
-                  
-                )}>
+                <span
+                  className={cn(
+                    "rounded-md px-5 py-3 font-mono text-2xl font-semibold tracking-widest",
+                  )}
+                >
                   {subject.subject_code}
                 </span>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                leftIcon={copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                leftIcon={
+                  copied ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )
+                }
                 onClick={handleCopyCode}
               >
                 {copied ? "Copied!" : "Copy code"}
               </Button>
               <p className="text-xs text-muted">
-                {subject.studentCount} student{subject.studentCount !== 1 ? "s" : ""} enrolled so far
+                {subject.studentCount} student
+                {subject.studentCount !== 1 ? "s" : ""} enrolled so far
               </p>
             </div>
           </div>
 
           {/* Attendance breakdown */}
-         {subject && (
-  <div className="rounded-lg border border-border bg-surface p-6">
-    <p className="font-display text-base font-medium text-foreground mb-5">
-      Attendance breakdown
-    </p>
+          {subject && (
+            <div className="rounded-lg border border-border bg-surface p-6">
+              <p className="font-display text-base font-medium text-foreground mb-5">
+                Attendance breakdown
+              </p>
 
-    <div className="flex flex-wrap items-center gap-8">
-      <ProgressRing
-        value={subject.attendanceRate / 100}
-        size={96}
-        strokeWidth={8}
-      />
+              <div className="flex flex-wrap items-center gap-8">
+                <ProgressRing
+                  value={subject.attendanceRate / 100}
+                  size={96}
+                  strokeWidth={8}
+                />
 
-      <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
-        <BreakdownRow
-          label="Present"
-          value={subject.present}
-          tone="present"
-        />
+                <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                  <BreakdownRow
+                    label="Present"
+                    value={subject.present}
+                    tone="present"
+                  />
 
-        <BreakdownRow
-          label="Absent"
-          value={subject.absent}
-          tone="absent"
-        />
+                  <BreakdownRow
+                    label="Absent"
+                    value={subject.absent}
+                    tone="absent"
+                  />
 
-        <BreakdownRow
-          label="Late"
-          value={subject.late}
-          tone="late"
-        />
+                  <BreakdownRow label="Late" value={subject.late} tone="late" />
 
-        <BreakdownRow
-          label="Excused"
-          value={subject.excused}
-          tone="excused"
-        />
-      </div>
-    </div>
-  </div>
-)}
+                  <BreakdownRow
+                    label="Excused"
+                    value={subject.excused}
+                    tone="excused"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="rounded-lg border border-border bg-surface p-6 space-y-4">
             <div>
-              <p className="font-display text-base font-medium text-foreground">Upload students</p>
+              <p className="font-display text-base font-medium text-foreground">
+                Upload students
+              </p>
               <p className="text-sm text-muted mt-0.5">
-                Upload the class roster PDF for this subject. The backend will extract each student name and enrollment number, create missing records, and link the students to this subject.
+                Upload the class roster PDF for this subject. The backend will
+                extract each student name and enrollment number, create missing
+                records, and link the students to this subject.
               </p>
             </div>
 
@@ -293,7 +336,10 @@ function SubjectDetail() {
 
             {studentFile && (
               <p className="text-sm text-muted">
-                Selected: <span className="font-medium text-foreground">{studentFile.name}</span>
+                Selected:{" "}
+                <span className="font-medium text-foreground">
+                  {studentFile.name}
+                </span>
               </p>
             )}
 
@@ -325,7 +371,9 @@ function BreakdownRow({
   return (
     <div className="flex items-center justify-between gap-6">
       <Stamp status={tone} />
-      <span className="font-mono text-sm font-medium text-foreground">{value}</span>
+      <span className="font-mono text-sm font-medium text-foreground">
+        {value}
+      </span>
     </div>
   );
 }

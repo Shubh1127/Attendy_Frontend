@@ -55,9 +55,10 @@ export default function StudentLoginPage() {
     }
 
     setSession({
-      token: result.data.token,
+      token: result.data.token!,
+      expiresAt: result.data.expiresAt!,
       user: {
-        id: String(result.data.student_id),
+        id: result.data.student_id!,
         name: result.data.student_name!,
         role: "student",
       },
@@ -90,9 +91,10 @@ export default function StudentLoginPage() {
     }
 
     setSession({
-      token: result.data.token,
+      token: result.data.token!,
+      expiresAt: result.data.expiresAt!,
       user: {
-        id: String(result.data.student_id),
+        id: result.data.student_id!,
         name: result.data.student_name!,
         role: "student",
       },
@@ -160,7 +162,7 @@ export default function StudentLoginPage() {
             description="This appears to be your first login. Please record your voice once to complete your registration."
           />
 
-          <AudioCapture onCapture={handleVoiceCapture} />
+          <AudioCapture onCapture={handleVoiceCapture} onContinue={() => {}} />
 
           {loading && (
             <Notice

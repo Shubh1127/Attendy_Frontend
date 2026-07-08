@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, CheckCircle2, ScanFace, Mic } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  ChevronLeft,
+  CheckCircle2,
+  Clock3,
+  Mic,
+  RefreshCw,
+  ScanFace,
+} from "lucide-react";
 import Link from "next/link";
 import { RoleGate } from "@/components/layout/RoleGate";
 import { Stamp } from "@/components/ui/Stamp";
@@ -13,9 +20,31 @@ import { Notice } from "@/components/ui/Notice";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { endpoints } from "@/lib/api/endpoints";
 import { useSession } from "@/lib/hooks/useSession";
-import type { AttendanceEntry, AttendanceSession, AttendanceStatus } from "@/lib/api/types";
+import type {
+  AttendanceEntry,
+  AttendanceEntryUpdate,
+  AttendanceSession3,
+  AttendanceStatus,
+} from "@/lib/api/types";
 import { formatConfidence } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
+
+const STATUS_OPTIONS: AttendanceStatus[] = [
+  "present",
+  "absent",
+  "late",
+  "excused",
+];
+const SESSION_DURATION_MS = 60 * 60 * 1000;
+
+function formatRemainingTime(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
 
 export default function AttendanceReviewPage() {
   return (
@@ -25,70 +54,182 @@ export default function AttendanceReviewPage() {
   );
 }
 
-const STATUS_OPTIONS: AttendanceStatus[] = ["present", "absent", "late", "excused"];
-
-type EntryOverride = { id: string; status: AttendanceStatus };
-
 function ReviewPage() {
-  // const params = useParams<{ sessionId: number }>();
+  const params = useParams<{ sessionId: string }>();
+  const sessionId = Number(params.sessionId);
   const { session } = useSession();
   const router = useRouter();
 
-  const [attendanceSession, setAttendanceSession] = useState<AttendanceSession | null>(null);
-  const [overrides, setOverrides] = useState<Record<string, AttendanceStatus>>({});
+  const [attendanceSession, setAttendanceSession] =
+    useState<AttendanceSession3 | null>(null);
+  const [entries, setEntries] = useState<AttendanceEntry[]>([]);
+  const [overrides, setOverrides] = useState<Record<number, AttendanceStatus>>(
+    {},
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const autoCloseTriggeredRef = useRef(false);
 
-  // useEffect(() => {
-  //   if (!session || !params.sessionId) return;
-  //   let cancelled = false;
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
-  //   endpoints.getAttendanceSession(params.sessionId, session.token).then((res) => {
-  //     if (cancelled) return;
-  //     if (!res.ok) { setLoadError("Couldn't load the attendance session."); return; }
-  //     setAttendanceSession(res.data);
-  //     // Seed overrides from biometric results so teacher sees the initial state
-  //     const initial: Record<string, AttendanceStatus> = {};
-  //     res.data.entries.forEach((e) => { initial[e.id] = e.status; });
-  //     setOverrides(initial);
-  //   });
+  const remainingMs = useMemo(() => {
+    if (!attendanceSession) return null;
 
-  //   return () => { cancelled = true; };
-  // }, [session, params.sessionId]);
+    const openedAt = Date.parse(attendanceSession.opened_at);
+    if (Number.isNaN(openedAt)) return null;
 
-  const handleOverride = (entryId: string, status: AttendanceStatus) => {
-    setOverrides((prev) => ({ ...prev, [entryId]: status }));
+    return Math.max(0, openedAt + SESSION_DURATION_MS - now);
+  }, [attendanceSession, now]);
+
+  const checkedInCount = useMemo(
+    () =>
+      entries.filter((entry) => {
+        const currentStatus = overrides[entry.student_id] ?? entry.status;
+        return (
+          currentStatus === "present" ||
+          currentStatus === "late" ||
+          currentStatus === "excused"
+        );
+      }).length,
+    [entries, overrides],
+  );
+
+  const loadSession = async (silent = false) => {
+    if (!session || Number.isNaN(sessionId)) return;
+
+    if (silent) {
+      setSyncing(true);
+    } else {
+      setLoading(true);
+    }
+
+    const res = await endpoints.getAttendanceSession(sessionId, session.token);
+
+    if (silent) {
+      setSyncing(false);
+    } else {
+      setLoading(false);
+    }
+
+    if (!res.ok) {
+      if (!silent) {
+        setLoadError("Couldn't load the attendance session.");
+      }
+      return;
+    }
+
+    setLoadError(null);
+    setAttendanceSession(res.data.session);
+    setEntries(res.data.entries);
+
+    if (res.data.session.status === "closed") {
+      setConfirmed(true);
+    }
   };
 
-  const handleConfirm = async () => {
-    if (!session || !attendanceSession) return;
+  const closeSession = async () => {
+    if (!session || !attendanceSession || Number.isNaN(sessionId)) return;
+
     setSubmitting(true);
     setSubmitError(null);
 
-    // const entries: EntryOverride[] = attendanceSession.entries.map((e) => ({
-    //   id: e.id,
-    //   status: overrides[e.id] ?? e.status,
-    // }));
+    const payload: AttendanceEntryUpdate[] = entries.map((entry) => {
+  const status = overrides[entry.student_id] ?? entry.status;
 
-    // const res = await endpoints.reviewAttendanceSession(attendanceSession.id, entries, session.token);
-    // setSubmitting(false);
+  return {
+    studentId: entry.student_id,
+    status: status === "not_marked" ? "absent" : status,
+  };
+});
 
-    // if (!res.ok) {
-    //   setSubmitError("Couldn't submit the session. Please try again.");
-    //   return;
-    // }
-    // setConfirmed(true);
+    const res = await endpoints.updateAttendanceSession(
+      sessionId,
+      payload,
+      session.token,
+    );
+    setSubmitting(false);
+
+    if (!res.ok) {
+      setSubmitError("Couldn't submit the session. Please try again.");
+      autoCloseTriggeredRef.current = false;
+      return;
+    }
+
+    setAttendanceSession((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: "closed",
+            closed_at: res.data.session.closed_at ?? new Date().toISOString(),
+          }
+        : prev,
+    );
+    setConfirmed(true);
   };
 
-  // const presentCount = attendanceSession
-  //   ? attendanceSession.entries.filter((e) => (overrides[e.id] ?? e.status) === "present").length
-  //   : 0;
+  useEffect(() => {
+    if (!session || Number.isNaN(sessionId)) {
+      if (Number.isNaN(sessionId)) {
+        setLoadError("Invalid session ID.");
+      }
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const run = async (silent = false) => {
+      if (cancelled) return;
+      await loadSession(silent);
+    };
+
+    void run(false);
+
+    const interval = window.setInterval(() => {
+      if (!cancelled && !confirmed) {
+        void run(true);
+      }
+    }, 10_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [session, sessionId, confirmed]);
+
+  useEffect(() => {
+    if (!attendanceSession || confirmed || loading) return;
+
+    if (remainingMs === null || remainingMs > 0) {
+      autoCloseTriggeredRef.current = false;
+      return;
+    }
+
+    if (autoCloseTriggeredRef.current) return;
+
+    autoCloseTriggeredRef.current = true;
+    void closeSession();
+  }, [attendanceSession, confirmed, loading, remainingMs]);
+
+  const handleOverride = (studentId: number, status: AttendanceStatus) => {
+    setOverrides((prev) => ({ ...prev, [studentId]: status }));
+  };
 
   if (confirmed) {
-    // return <ConfirmedView sessionName={attendanceSession?.subjectName ?? "Session"} router={router} />;
-    return <ConfirmedView sessionName={"Machine Learning"} router={router} />;
+    return (
+      <ConfirmedView
+        sessionName={attendanceSession?.subjects?.name ?? "Attendance session"}
+        router={router}
+      />
+    );
   }
 
   return (
@@ -108,82 +249,140 @@ function ReviewPage() {
 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="font-mono text-eyebrow uppercase text-muted">Review & confirm</p>
+            <p className="font-mono text-eyebrow uppercase text-muted">
+              Review & confirm
+            </p>
             <h1 className="font-display text-display-md font-medium text-foreground">
-              {/* {attendanceSession?.subjectName ?? "Loading session…"} */}
-              <h1>Machine Learning</h1>
+              {attendanceSession?.subjects?.name ?? "Loading session…"}
             </h1>
-            {/* {attendanceSession && (
-              <p className="text-sm text-muted mt-1">
-                {attendanceSession.date} · Opened at {attendanceSession.openedAt} ·{" "}
-                <span className="font-medium text-foreground">{presentCount} present</span> of{" "}
-                {attendanceSession.entries.length}
+            {attendanceSession && (
+              <p className="mt-1 text-sm text-muted">
+                {new Date(attendanceSession.opened_at).toLocaleDateString(
+                  "en-GB",
+                  {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  },
+                )}{" "}
+                · Opened at{" "}
+                {new Date(attendanceSession.opened_at).toLocaleTimeString(
+                  "en-GB",
+                  {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  },
+                )}{" "}
+                ·{" "}
+                <span className="font-medium text-foreground">
+                  {checkedInCount} checked in
+                </span>{" "}
+                of {entries.length}
               </p>
-            )} */}
-            <h2>5/7/2026 . Opened at 9:00 AM</h2>
-            <br />
-            <h2>3 present of 30</h2>
+            )}
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5">
+                <Clock3 className="h-3.5 w-3.5" />
+                {remainingMs === null
+                  ? "--:--"
+                  : formatRemainingTime(remainingMs)}{" "}
+                remaining
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5">
+                {syncing ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ScanFace className="h-3.5 w-3.5" />
+                )}
+                {syncing ? "Syncing attendance" : "Auto refresh every 10s"}
+              </span>
+            </div>
           </div>
-          <Button
-            leftIcon={<CheckCircle2 className="h-4 w-4" />}
-            isLoading={submitting}
-            disabled={!attendanceSession}
-            onClick={handleConfirm}
-          >
-            Confirm & close
-          </Button>
+            <Button
+              leftIcon={<CheckCircle2 className="h-4 w-4" />}
+              isLoading={submitting}
+              onClick={closeSession}
+            >
+              Confirm & Close
+            </Button>
+        
         </div>
       </motion.div>
 
-      {loadError && <Notice tone="error" title="Load failed" description={loadError} />}
-      {submitError && <Notice tone="error" title="Submission failed" description={submitError} />}
+      {loading && (
+        <Notice
+          tone="info"
+          title="Loading attendance session"
+          description="Fetching the latest student marks."
+        />
+      )}
+      {loadError && (
+        <Notice tone="error" title="Load failed" description={loadError} />
+      )}
+      {submitError && (
+        <Notice
+          tone="error"
+          title="Submission failed"
+          description={submitError}
+        />
+      )}
 
       <Notice
         tone="info"
-        title="Biometric marks applied — review before closing"
-        description="Face and voice recognition has pre-marked the register. Override any row by tapping a different status. Once you confirm, the session closes and marks are locked."
+        title="Biometric marks applied"
+        description="Face and voice recognition pre-marks the register. Every 10 seconds the latest attendance logs are reloaded so you can watch the session update in real time. The first 10 minutes count as present, later marks count as late, and the session auto-closes after 1 hour."
       />
 
       <div className="rounded-lg border border-border bg-surface">
         <div className="flex items-center gap-4 border-b border-border px-5 py-3">
-          <p className="flex-1 text-xs font-medium uppercase tracking-[0.1em] text-muted">Student</p>
-          <p className="w-32 text-right text-xs font-medium uppercase tracking-[0.1em] text-muted hidden sm:block">Biometric</p>
-          <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted">Mark</p>
+          <p className="flex-1 text-xs font-medium uppercase tracking-[0.1em] text-muted">
+            Student
+          </p>
+          <p className="w-32 text-right text-xs font-medium uppercase tracking-[0.1em] text-muted hidden sm:block">
+            Biometric
+          </p>
+          <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted">
+            Mark
+          </p>
         </div>
 
-        {!attendanceSession ? (
+        {!attendanceSession || loading ? (
           <div className="px-5">
-            {[0, 1, 2, 3, 4, 5].map((i) => <SkeletonRow key={i} />)}
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <SkeletonRow key={i} />
+            ))}
           </div>
         ) : (
           <div className="px-5">
-            {/* {attendanceSession.entries.map((entry, i) => (
+            {entries.map((entry, i) => (
               <EntryRow
-                key={entry.id}
+                key={entry.student_id}
                 entry={entry}
-                currentStatus={overrides[entry.id] ?? entry.status}
+                currentStatus={overrides[entry.student_id] ?? entry.status}
                 index={i}
-                onOverride={(status) => handleOverride(entry.id, status)}
+                onOverride={(status) =>
+                  handleOverride(entry.student_id, status)
+                }
               />
-            ))} */}
+            ))}
           </div>
         )}
       </div>
 
-      {/* Sticky confirm bar on mobile */}
-      {attendanceSession && (
+      {attendanceSession && attendanceSession.status !== "closed" && (
         <div className="fixed inset-x-0 bottom-16 z-20 flex justify-center md:hidden">
           <div className="mx-5 w-full max-w-sm rounded-lg border border-border bg-surface shadow-lift px-4 py-3 flex items-center justify-between gap-4">
             <p className="text-sm text-muted">
-              {/* <span className="font-medium text-foreground">{presentCount}</span> of{" "}
-              {attendanceSession.entries.length} present */}
-              <span className="font-medium text-foreground">3</span> of 30 present
+              <span className="font-medium text-foreground">
+                {checkedInCount}
+              </span>{" "}
+              of {entries.length} checked in
             </p>
             <Button
               size="sm"
               leftIcon={<CheckCircle2 className="h-4 w-4" />}
               isLoading={submitting}
-              onClick={handleConfirm}
+              onClick={closeSession}
             >
               Confirm
             </Button>
@@ -211,59 +410,69 @@ function EntryRow({
     <motion.div
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.25, delay: 0.02 * index, ease: [0.16, 1, 0.3, 1] }}
+      transition={{
+        duration: 0.25,
+        delay: 0.02 * index,
+        ease: [0.16, 1, 0.3, 1],
+      }}
       className="ruled-row flex flex-wrap items-center gap-4 py-3.5"
     >
-      {/* Student */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        {/* <Avatar name={entry.studentName} size="sm" /> */}
+        <Avatar name={entry.student.name} size="sm" />
         <div className="min-w-0">
-          <p className={cn("text-sm font-medium truncate", isDirty ? "text-accent-foreground" : "text-foreground")}>
-            {/* {entry.studentName} */}
-        <h2>Shubham</h2>
+          <p
+            className={cn(
+              "text-sm font-medium truncate",
+              isDirty ? "text-accent-foreground" : "text-foreground",
+            )}
+          >
+            {entry.student.name}
           </p>
-          {/* <p className="font-mono text-xs text-muted">{entry.rollNumber}</p> */}
-          <p className="font-mono text-xs text-muted">231302075</p>
+          <p className="font-mono text-xs text-muted">
+            {entry.student.enrollment_number}
+          </p>
         </div>
       </div>
 
-      {/* Biometric confidence */}
       <div className="hidden sm:flex w-32 flex-col items-end gap-1 text-right">
         {entry.method ? (
           <>
             <div className="flex items-center gap-1 text-xs text-muted">
-              {entry.method === "face"
-                ? <ScanFace className="h-3 w-3" />
-                : <Mic className="h-3 w-3" />}
+              {entry.method === "face" ? (
+                <ScanFace className="h-3 w-3" />
+              ) : (
+                <Mic className="h-3 w-3" />
+              )}
               <span className="capitalize">{entry.method}</span>
             </div>
-            {/* {entry.confidence !== undefined && (
-              // <p className="font-mono text-[11px] text-muted">{formatConfidence(entry.confidence)}</p>
-            )} */}
-            <p className="font-mono text-[11px] text-muted">Confidence: 0.85</p>
+            {entry.confidence !== null && (
+              <p className="font-mono text-[11px] text-muted">
+                {formatConfidence(entry.confidence)}
+              </p>
+            )}
           </>
         ) : (
           <p className="text-xs text-muted">—</p>
         )}
       </div>
 
-      {/* Override picker */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        {/* {STATUS_OPTIONS.map((s) => (
+        {STATUS_OPTIONS.map((status) => (
           <button
-            key={s}
-            onClick={() => onOverride(s)}
-            aria-label={`Mark ${entry.studentName} ${s}`}
-            aria-pressed={currentStatus === s}
+            key={status}
+            onClick={() => onOverride(status)}
+            aria-label={`Mark ${entry.student.name} ${status}`}
+            aria-pressed={currentStatus === status}
             className={cn(
               "transition-opacity",
-              currentStatus === s ? "opacity-100" : "opacity-25 hover:opacity-70"
+              currentStatus === status
+                ? "opacity-100"
+                : "opacity-30 hover:opacity-70",
             )}
           >
-            <Stamp status={s} />
+            <Stamp status={status} />
           </button>
-        ))} */}
-
+        ))}
       </div>
     </motion.div>
   );
@@ -286,14 +495,21 @@ function ConfirmedView({
         <Stamp status="present" className="text-2xl px-6 py-2" />
       </motion.div>
       <div className="space-y-2">
-        <h2 className="font-display text-display-md font-medium text-foreground">Register closed</h2>
+        <h2 className="font-display text-display-md font-medium text-foreground">
+          Register closed
+        </h2>
         <p className="text-sm text-muted max-w-sm">
-          The session for <span className="font-medium text-foreground">{sessionName}</span> has been
-          confirmed and locked. Students can see their marks in their attendance view.
+          The session for{" "}
+          <span className="font-medium text-foreground">{sessionName}</span> has
+          been confirmed and locked. Students can see their marks in their
+          attendance view.
         </p>
       </div>
       <div className="flex gap-3">
-        <Button variant="outline" onClick={() => router.push("/teacher/attendance")}>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/teacher/attendance")}
+        >
           Back to Sessions
         </Button>
         <Button onClick={() => router.push("/teacher/dashboard")}>

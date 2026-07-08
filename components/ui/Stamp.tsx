@@ -7,6 +7,7 @@ const statusConfig: Record<AttendanceStatus, { label: string; classes: string }>
   late: { label: "Late", classes: "text-accent-foreground bg-accent/15" },
   excused: { label: "Excused", classes: "text-muted" },
   pending: { label: "Pending", classes: "text-muted" },
+  not_marked: { label: "Not Marked", classes: "text-muted" },
 };
 
 export function Stamp({

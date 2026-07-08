@@ -17,7 +17,7 @@ export interface AuthUser {
   id: number;
   role: Role;
   name: string;
-  email: string;
+  email?: string;
 }
 
 
@@ -29,6 +29,32 @@ export interface user{
   avatarUrl?:string,
   rollNumber?:string,
   department?:string
+}
+export interface SubjectAttendance {
+  subject_id: number;
+  subject_name: string;
+  attendance_percentage: number;
+  total_sessions: number;
+  attended_sessions: number;
+  present: number;
+  late: number;
+  absent: number;
+}
+
+export interface OverallAttendance {
+  attendance_percentage: number;
+  total_sessions: number;
+  attended_sessions: number;
+  present: number;
+  late: number;
+  absent: number;
+}
+
+export interface StudentOverallAttendanceResponse {
+  success: boolean;
+  overall: OverallAttendance;
+  subjects: SubjectAttendance[];
+  needs_attention: SubjectAttendance[];
 }
 
 export interface userContextType{
@@ -43,6 +69,8 @@ export interface BiometricLoginResult {
   matched: boolean;
 
   token?: string;
+
+  expiresAt?: string;
 
   student_id?: number;
 
@@ -129,14 +157,37 @@ export interface SubjectJoin{
 }
 export type SubjectColor = "verdant" | "vermilion" | "amber" | "indigo" | "slate";
 
-export type AttendanceStatus = "present" | "absent" | "late" | "excused" | "pending";
+export type AttendanceStatus = "present" | "absent" | "late" | "excused" | "pending" | "not_marked";
 
+export interface StudentAttendanceSession {
+  session_id: number;
+  subject_id: number;
+  subject_code: string;
+  subject_name: string;
+  section: string;
+
+  opened_at: string;
+  closed_at: string | null;
+
+  status: "open" | "closed";
+
+  marked: boolean;
+
+  mark_status: "present" | "absent" | "late" | "excused" | "pending";
+
+  marked_at: string | null;
+}
+
+export interface GetStudentAttendanceSessionsResponse {
+  success: boolean;
+  sessions: StudentAttendanceSession[];
+}
 export interface AttendanceEntry {
   session_id: number;
   subject_id: number;
   student_id: number;
 
-  status: "present" | "absent" | "late" | "pending";
+  status: "present" | "absent" | "late" | "pending" | "excused" | "not_marked";
 
   method: "face" | "voice" | "manual" | null;
 
@@ -171,6 +222,20 @@ export interface AttendanceSession {
   closed_at?: string | null;
 }
 
+export interface ActiveAttendanceSession {
+  session_id: number;
+  subject_id: number;
+  subject_name: string | null;
+  subject_code: string | null;
+  section: string | null;
+  status: "open";
+  opened_at: string;
+  closed_at: string | null;
+  marked: boolean;
+  mark_status: AttendanceStatus | null;
+  marked_at: string | null;
+}
+
 export interface AttendanceSessionSummary {
   session_id: number;
   subject_id: number;
@@ -179,6 +244,25 @@ export interface AttendanceSessionSummary {
   opened_at: string;
   closed_at: string | null;
   subject_name: string | null;
+}
+
+export interface TeacherActiveAttendanceSession {
+  session_id: number;
+  subject_id: number;
+  teacher_id: number;
+  status: "open";
+  opened_at: string;
+  closed_at: string | null;
+  subject_name: string | null;
+  subject_code: string | null;
+  section: string | null;
+  checked_in_count: number;
+  total_students: number;
+}
+
+export interface GetTeacherActiveAttendanceSessionsResponse {
+  success: boolean;
+  sessions: TeacherActiveAttendanceSession[];
 }
 
 export interface AttendanceSession3 {
@@ -207,6 +291,43 @@ export interface GetAttendanceSessionsResponse {
   sessions: AttendanceSessionSummary[];
 }
 
+export interface GetActiveAttendanceResponse {
+  success: boolean;
+  sessions: ActiveAttendanceSession[];
+}
+
+export interface StudentSubjectAttendanceSession {
+  session_id: number;
+  subject_id: number;
+  opened_at: string;
+  closed_at: string | null;
+  status: "closed";
+  subject_code: string;
+  subject_name: string;
+  section: string;
+  marked: boolean;
+  mark_status: AttendanceStatus | null;
+  marked_at: string | null;
+}
+
+export interface GetStudentSubjectAttendanceSessionsResponse {
+  success: boolean;
+  subject: {
+    subject_id: number;
+    subject_code: string;
+    name: string;
+    section: string;
+  };
+  sessions: StudentSubjectAttendanceSession[];
+}
+
+export interface CheckInAttendanceResponse {
+  success: boolean;
+  message: string;
+  entry: AttendanceEntry;
+  session: ActiveAttendanceSession;
+}
+
 export interface CreateAttendanceSessionResponse {
   success: boolean;
   message: string;
@@ -215,7 +336,7 @@ export interface CreateAttendanceSessionResponse {
 
 export interface AttendanceEntryUpdate {
   studentId: number;
-  status: "present" | "absent" | "late" | "pending";
+  status: "present" | "absent" | "late" | "excused" | "pending";
 }
 
 export interface UpdateAttendanceSessionRequest {

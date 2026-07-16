@@ -71,12 +71,16 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     setStatus("requesting");
     setErrorMessage(null);
     try {
+      console.log("Requesting camera...");
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode, width: { ideal: 720 }, height: { ideal: 720 } },
         audio: false,
       });
+      console.log("Camera granted");
       streamRef.current = stream;
+      console.log("Stream saved");
       if (videoRef.current) {
+        console.log("Video ref exists");
         videoRef.current.srcObject = stream;
 
         console.log("Stream assigned:", stream);

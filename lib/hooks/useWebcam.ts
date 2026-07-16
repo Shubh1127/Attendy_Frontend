@@ -60,56 +60,74 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
   }, []);
 
   const start = useCallback(async () => {
-    if (
-      typeof navigator === "undefined" ||
-      !navigator.mediaDevices?.getUserMedia
-    ) {
+  if (
+    typeof navigator === "undefined" ||
+    !navigator.mediaDevices?.getUserMedia
+  ) {
+    setStatus("unavailable");
+    setErrorMessage("This browser doesn't support camera access.");
+    return;
+  }
+
+  setStatus("requesting");
+  setErrorMessage(null);
+
+  try {
+    console.log("Requesting camera...");
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode,
+        width: { ideal: 720 },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    });
+
+    console.log("Camera granted");
+
+    streamRef.current = stream;
+
+    console.log("Stream saved");
+
+    const video = videoRef.current;
+
+    if (video) {
+      console.log("videoRef exists");
+
+      video.srcObject = stream;
+
+      console.log("Stream assigned:", stream);
+      console.log("Video element:", video);
+
+      try {
+        await video.play();
+        console.log("Video playing");
+      } catch (err) {
+        console.error("Play failed:", err);
+      }
+    } else {
+      console.log("videoRef is NULL");
+    }
+
+    setStatus("ready");
+  } catch (err) {
+    const name = err instanceof DOMException ? err.name : "";
+
+    if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+      setStatus("denied");
+      setErrorMessage(
+        "Camera access was denied. Allow it in your browser settings to continue."
+      );
+    } else if (name === "NotFoundError") {
       setStatus("unavailable");
-      setErrorMessage("This browser doesn't support camera access.");
-      return;
+      setErrorMessage("No camera was found on this device.");
+    } else {
+      setStatus("error");
+      setErrorMessage("Couldn't start the camera. Try again.");
     }
-    setStatus("requesting");
-    setErrorMessage(null);
-    try {
-      console.log("Requesting camera...");
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 720 }, height: { ideal: 720 } },
-        audio: false,
-      });
-      console.log("Camera granted");
-      streamRef.current = stream;
-      console.log("Stream saved");
-      if (videoRef.current) {
-        console.log("Video ref exists");
-        videoRef.current.srcObject = stream;
-
-        console.log("Stream assigned:", stream);
-        console.log("Video element:", videoRef.current);
-
-        try {
-          await videoRef.current.play();
-          console.log("Video playing");
-        } catch (err) {
-          console.error("Play failed:", err);
-        }
-      }
-      setStatus("ready");
-    } catch (err) {
-      const name = err instanceof DOMException ? err.name : "";
-      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-        setStatus("denied");
-        setErrorMessage(
-          "Camera access was denied. Allow it in your browser settings to continue.",
-        );
-      } else if (name === "NotFoundError") {
-        setStatus("unavailable");
-        setErrorMessage("No camera was found on this device.");
-      } else {
-        setStatus("error");
-        setErrorMessage("Couldn't start the camera. Try again.");
-      }
-    }
-  }, [facingMode]);
+  }
+}, [facingMode]);
 
   const captureFrame = useCallback(async (): Promise<Blob | null> => {
     const video = videoRef.current;

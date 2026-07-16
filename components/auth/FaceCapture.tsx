@@ -77,27 +77,37 @@ export function FaceCapture({
   return (
     <div className="flex flex-col items-center gap-5">
       <div className="relative h-60 w-60 overflow-hidden rounded-full border border-border bg-surface-muted sm:h-64 sm:w-64">
-        {stage === "live" && status === "ready" && (
-          <>
-            <video
-              ref={videoRef}
-              muted
-              playsInline
-              className="h-full w-full -scale-x-100 object-cover"
-            />
+        {stage === "live" && (
+  <>
+    <video
+      ref={videoRef}
+      autoPlay
+      muted
+      playsInline
+      className="h-full w-full -scale-x-100 object-cover"
+    />
 
-            <span
-              className="scan-ring animate-scan-pulse text-primary"
-              aria-hidden
-            />
+    {status === "ready" && (
+      <>
+        <span
+          className="scan-ring animate-scan-pulse text-primary"
+          aria-hidden
+        />
 
-            <span
-              className="absolute inset-0 rounded-full ring-1 ring-inset ring-primary/40"
-              aria-hidden
-            />
-          </>
-        )}
+        <span
+          className="absolute inset-0 rounded-full ring-1 ring-inset ring-primary/40"
+          aria-hidden
+        />
+      </>
+    )}
 
+    {status === "requesting" && (
+      <div className="absolute inset-0 flex items-center justify-center bg-surface text-xs text-muted">
+        Asking for camera access...
+      </div>
+    )}
+  </>
+)}
         {stage === "captured" && snapshotUrl && (
           <img
             src={snapshotUrl}

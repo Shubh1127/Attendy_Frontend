@@ -58,19 +58,21 @@ export function FaceCapture({
 
     setSnapshotUrl(url);
     // setCapturedBlob(blob);
+    stop();
 
     setStage("captured");
 
     onCapture(blob);
   };
 
-  const retake = () => {
+  const retake =async () => {
     if (snapshotUrl) {
       URL.revokeObjectURL(snapshotUrl);
     }
 
     setSnapshotUrl(null);
     setStage("live");
+    await start();
     onRetake?.();
   };
 
